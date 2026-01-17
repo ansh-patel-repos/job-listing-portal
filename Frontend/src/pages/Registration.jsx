@@ -1,6 +1,8 @@
 import { GoEye, GoEyeClosed } from "react-icons/go";
+import { FcGoogle } from "react-icons/fc";
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export const Registration = () => {
   const [formData, setFormData] = useState({
@@ -10,7 +12,11 @@ export const Registration = () => {
     role: "",
   });
 
-  const [showPassword, setShowPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -18,6 +24,13 @@ export const Registration = () => {
       ...prev,
       [name]: value,
     }));
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: "",
+      }));
+    }
   };
 
   const handleRoleSelect = (role) => {
@@ -25,6 +38,54 @@ export const Registration = () => {
       ...prev,
       role,
     }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate role is selected
+    if (!formData.role) {
+      setErrors({ role: "Please select a role" });
+      return;
+    }
+
+    // Validate all required fields
+    if (!formData.name.trim()) {
+      setErrors({ name: "Name is required" });
+      return;
+    }
+    if (!formData.email.trim()) {
+      setErrors({ email: "Email is required" });
+      return;
+    }
+    if (!formData.password) {
+      setErrors({ password: "Password is required" });
+      return;
+    }
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      console.log("Registering user...", formData);
+      await register(formData);
+      console.log("Registration successful, navigating to dashboard");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Registration error:", error);
+      if (error.response?.data?.errors) {
+        setErrors(error.response.data.errors);
+      } else {
+        setErrors({ general: error.response?.data?.message || "Registration failed" });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    // Redirect to backend Google OAuth endpoint
+    window.location.href = "http://localhost:5000/api/auth/google";
   };
 
   return (
@@ -41,7 +102,28 @@ export const Registration = () => {
           Create your account to get started
         </p>
 
-        <form>
+        {/* Google OAuth Button */}
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="w-full bg-white border border-slate-300 text-slate-700 font-semibold py-2.5 rounded-lg
+                     hover:bg-slate-50 hover:shadow-md active:scale-[0.98]
+                     transition-all duration-200 flex items-center justify-center gap-2 mb-4"
+        >
+          <FcGoogle size={20} />
+          Continue with Google
+        </button>
+
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-slate-500">or</span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit}>
           {/* Name */}
           <div className="mb-4">
             <label
@@ -151,17 +233,25 @@ export const Registration = () => {
             {!formData.role && (
               <p className="text-xs text-red-500 mt-2 italic">Please select a role</p>
             )}
+            {errors.role && (
+              <p className="text-xs text-red-500 mt-2 italic">{errors.role}</p>
+            )}
           </div>
 
           {/* Register Button */}
           <button
             type="submit"
+            disabled={isLoading}
             className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg
            hover:bg-blue-700 hover:shadow-lg active:scale-[0.98]
-           transition-all duration-200"
+           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Register
+            {isLoading ? "Registering..." : "Register"}
           </button>
+
+          {errors.general && (
+            <p className="text-sm text-red-500 mt-2 text-center">{errors.general}</p>
+          )}
         </form>
 
         {/* Login Link */}
