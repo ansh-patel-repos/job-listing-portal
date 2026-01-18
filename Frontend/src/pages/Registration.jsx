@@ -76,7 +76,13 @@ export const Registration = () => {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       } else {
-        setErrors({ general: error.response?.data?.message || "Registration failed" });
+        const message = error.response?.data?.message || "Registration failed";
+        // Handle duplicate email error
+        if (message.includes("Email already registered")) {
+          setErrors({ email: "This email is already registered. Please login or use a different email." });
+        } else {
+          setErrors({ general: message });
+        }
       }
     } finally {
       setIsLoading(false);
@@ -168,6 +174,9 @@ export const Registration = () => {
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
  focus:border-blue-500"
             />
+            {errors.email && (
+              <p className="text-xs text-red-500 mt-1">{errors.email}</p>
+            )}
           </div>
 
           {/* Password */}
@@ -250,7 +259,9 @@ export const Registration = () => {
           </button>
 
           {errors.general && (
-            <p className="text-sm text-red-500 mt-2 text-center">{errors.general}</p>
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700 font-medium">{errors.general}</p>
+            </div>
           )}
         </form>
 

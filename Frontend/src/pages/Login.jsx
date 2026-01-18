@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 import { GoEye, GoEyeClosed } from "react-icons/go";
 import { FcGoogle } from "react-icons/fc";
@@ -14,16 +14,8 @@ export const Login = () => {
     const [showPassword, setShowPassword] = useState(false)
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
-    const { login, isAuthenticated } = useAuth()
+    const { login } = useAuth()
     const navigate = useNavigate()
-
-    // Navigate to dashboard only on successful login
-    useEffect(() => {
-        if (isAuthenticated && !isLoading && Object.keys(errors).length === 0) {
-            console.log("✅ User authenticated! Redirecting to dashboard...")
-            navigate("/dashboard")
-        }
-    }, [isAuthenticated, isLoading, errors, navigate])
 
     const handleInputChange = (e) => {
         const {name, value} = e.target;
@@ -31,7 +23,7 @@ export const Login = () => {
         setFormData((prev) => ({
             ...prev, [name]: value
         }))
-        // Clear error for this field
+        // Clear error for this field, but keep general error
         if (errors[name]) {
             setErrors((prev) => ({
                 ...prev,
@@ -53,39 +45,24 @@ export const Login = () => {
             return
         }
 
-        // Clear field-level errors but keep general errors
-        setErrors((prev) => ({
-            general: prev.general, // Keep the general error message
-        }))
-
         setIsLoading(true)
 
         try {
-            console.log("🔄 Logging in with:", formData.email)
-            const response = await login(formData.email, formData.password)
-            console.log("✅ Login successful:", response)
-            console.log("📍 User data:", response.user)
-            // Navigate to dashboard after successful login
-            setTimeout(() => {
-                navigate("/dashboard", { replace: true })
-            }, 100)
+            await login(formData.email, formData.password)
+            setErrors({})
+            setIsLoading(false)
+            navigate("/dashboard")
         } catch (error) {
-            console.error("❌ Login error:", error)
-            console.error("Error response:", error.response?.data)
             setIsLoading(false)
             
             const errorMessage = error.response?.data?.message || "Login failed"
             
-            // If user doesn't exist, redirect to register page
+            // If user doesn't exist, show error message
             if (errorMessage.includes("Invalid email or password")) {
-                console.log("📍 User not found, redirecting to register page...")
-                // Use replace to prevent back button returning to login
-                navigate("/", { replace: true })
-                return
-            }
-            
-            // For other errors, show the error message
-            if (error.response?.data?.errors) {
+                setErrors({ 
+                    general: "Account does not exist. Please create an account first."
+                })
+            } else if (error.response?.data?.errors) {
                 setErrors(error.response.data.errors)
             } else {
                 setErrors({ general: errorMessage })
@@ -128,7 +105,7 @@ export const Login = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="mb-4">
             <label
               htmlFor="email"
@@ -141,7 +118,6 @@ export const Login = () => {
               id="email"
               name="email"
               placeholder="Enter your email..."
-              required
               autoComplete="off"
               value={formData.email}
               onChange={handleInputChange}
@@ -166,7 +142,6 @@ export const Login = () => {
               id="password"
               name="password"
               placeholder="Enter your password..."
-              required
               autoComplete="off"
               value={formData.password}
               onChange={handleInputChange}
@@ -184,6 +159,15 @@ export const Login = () => {
             )}
           </div>
 
+          {errors.general && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700 font-medium">{errors.general}</p>
+              <p className="text-xs text-red-600 mt-2">
+                Click on "Register" below to create a new account.
+              </p>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={isLoading}
@@ -192,10 +176,6 @@ export const Login = () => {
              transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
             {isLoading ? "Logging in..." : "Login"}
           </button>
-
-          {errors.general && (
-            <p className="text-sm text-red-500 mt-4 text-center">{errors.general}</p>
-          )}
         </form>
 
         <p className="text-sm text-center text-slate-600 mt-6">
