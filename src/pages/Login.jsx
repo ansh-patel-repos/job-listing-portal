@@ -1,8 +1,12 @@
 import { useState } from "react"
 import { NavLink } from "react-router-dom"
 import { GoEye, GoEyeClosed } from "react-icons/go";
+import { loginUser } from "../services/authService";
+import { useNavigate } from "react-router-dom";
 
 export const Login = () => {
+
+  const navigate = useNavigate()
 
     const [formData, setFormData] = useState({
         email: "",
@@ -19,15 +23,35 @@ export const Login = () => {
         }))
     }
 
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+
+      try {
+        const data = await loginUser(formData);
+
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("role", data.role);
+
+        if(data.role === "employer") {
+          navigate("/employer/dashboard", {replace: true });
+        }
+        else {
+          navigate("/seeker/dashboard", {replace: true });
+        }
+      } catch (error) {
+        alert("Invalid credentials")
+      }
+    };
+
     return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8
                 transition-all duration-300 hover:shadow-2xl">
         
-        {/* Title */}
         <h1 className="text-2xl font-bold text-center text-slate-800 mb-6">
           Login to your account
         </h1>
 
+      <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label
             htmlFor="email"
@@ -73,12 +97,13 @@ export const Login = () => {
         </div>
 
         <button
-          type="button"
+          type="submit"
           className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg
            hover:bg-blue-700 hover:shadow-lg active:scale-[0.98]
            transition-all duration-200">
           Login
         </button>
+        </form>
 
         <p className="text-sm text-center text-slate-600 mt-6">
           Don't have an account?

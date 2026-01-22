@@ -1,6 +1,7 @@
 import { GoEye, GoEyeClosed } from "react-icons/go";
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { registerUser } from "../services/authService";
 
 export const Registration = () => {
   const [formData, setFormData] = useState({
@@ -9,8 +10,9 @@ export const Registration = () => {
     password: "",
     role: "",
   });
-
-  const [showPassword, setShowPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState({Message: "", type: ""});
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -27,12 +29,70 @@ export const Registration = () => {
     }));
   };
 
+  const showToast = (Message, type = "success") => {
+    setToast({Message, type});
+    setTimeout(() => {
+      setToast({Message: "", type: ""})
+    }, 3000)
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const {name, email, password, role} = formData;
+    const registeredUserData = {
+      name,
+      email,
+      password,
+      role
+    }
+    
+    console.log(registeredUserData)
+
+    if(!formData.role) {
+      showToast("Please select a role", "error")
+      return;
+    }
+
+    setIsLoading(true);
+    const data = await registerUser(formData)
+
+    setTimeout(() => {
+      setIsLoading(false)
+      showToast(data.message || "Account created successfully!", "success")
+      setFormData(() => ({
+        name: "",
+        email: "",
+        password: "",
+        role: "", 
+      }))
+    }, 2000)
+  }
+
+  if(isLoading) {
+    return <h1>Loading...</h1>
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 px-4">
       <div
         className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8
                 transition-all duration-300 hover:shadow-2xl"
       >
+
+        {toast.Message && (
+          <div
+            className={`mb-4 rounded-lg px-4 py-2 text-sm font-medium text-center
+              ${
+                toast.type === "success"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+          >
+            {toast.Message}
+          </div>
+        )}
+
         {/* Title */}
         <h1 className="text-2xl font-bold text-center text-slate-800 mb-6">
           Create Account
@@ -41,7 +101,7 @@ export const Registration = () => {
           Create your account to get started
         </p>
 
-        <form>
+        <form onSubmit={handleSubmit}>
           {/* Name */}
           <div className="mb-4">
             <label
@@ -156,11 +216,16 @@ export const Registration = () => {
           {/* Register Button */}
           <button
             type="submit"
+            disabled={isLoading}
             className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg
            hover:bg-blue-700 hover:shadow-lg active:scale-[0.98]
            transition-all duration-200"
           >
-            Register
+            {isLoading ? (
+              <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              "Register"
+            )}
           </button>
         </form>
 
